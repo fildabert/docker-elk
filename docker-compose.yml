@@ -1,7 +1,6 @@
 version: '3.7'
 
 services:
-
   # The 'setup' service runs a one-off script which initializes users inside
   # Elasticsearch — such as 'logstash_internal' and 'kibana_system' — with the
   # values of the passwords defined in the '.env' file. It also creates the
@@ -39,6 +38,7 @@ services:
       BEATS_SYSTEM_PASSWORD: ${BEATS_SYSTEM_PASSWORD:-}
     networks:
       - elk
+      - proxy
     depends_on:
       - elasticsearch
 
@@ -65,6 +65,7 @@ services:
       discovery.type: single-node
     networks:
       - elk
+      - proxy
     restart: unless-stopped
 
   logstash:
@@ -85,6 +86,7 @@ services:
       LOGSTASH_INTERNAL_PASSWORD: ${LOGSTASH_INTERNAL_PASSWORD:-}
     networks:
       - elk
+      - proxy
     depends_on:
       - elasticsearch
     restart: unless-stopped
@@ -102,6 +104,13 @@ services:
       KIBANA_SYSTEM_PASSWORD: ${KIBANA_SYSTEM_PASSWORD:-}
     networks:
       - elk
+      - proxy
+    labels:
+      - 'traefik.enable=true'
+      - 'traefik.docker.network=proxy'
+      - 'traefik.http.routers.kibana.rule=Host(`kibana.fildabert.com`)'
+      - 'traefik.http.routers.kibana.entrypoints=websecure'
+      - 'traefik.http.services.kibana.loadbalancer.server.port=5601'
     depends_on:
       - elasticsearch
     restart: unless-stopped
@@ -109,6 +118,8 @@ services:
 networks:
   elk:
     driver: bridge
+  proxy:
+    external: true
 
 volumes:
   elasticsearch:
